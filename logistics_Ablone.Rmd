@@ -1,0 +1,179 @@
+---
+title: "Logistic Regression_Abalone"
+author: "Sanmoy Paul"
+date: "14 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Set Working Directory**
+```{r setwd, echo=TRUE} 
+setwd("C:/F/NMIMS/DataScience/Sem-2/DS/Project")
+```
+
+**Load Libraries**
+```{r LoadLibraries, echo=TRUE}  
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(gridExtra)
+library(plotly)
+library(MASS)
+library(caTools)
+library(ISLR)
+library(glmnet)
+library(caret)
+library(ROCR)
+``` 
+
+**Read Csv**
+```{r readCSV, echo=TRUE}
+AbaloneData<-read.csv("./data/logistic/Abalone.csv", header = TRUE, stringsAsFactors = FALSE)
+```   
+
+**Read First 6 recs**
+```{r ReadFirst, echo=TRUE}
+head(AbaloneData)
+```
+**Read Last 6 recs**
+```{r ReadLast, echo=TRUE}
+tail(AbaloneData)
+```
+
+**Structure of the data frame**
+```{r struc, echo=TRUE}
+str(AbaloneData)
+glimpse(AbaloneData)
+```
+
+**No of Cols**
+```{r nCol, echo=TRUE}
+ncol(AbaloneData)
+```
+
+**No of rows**
+```{r nRow, echo=TRUE}
+nrow(AbaloneData)
+```
+
+**Names**
+```{r colNames, echo=TRUE}
+names(AbaloneData)
+colnames(AbaloneData)
+```  
+
+**Summary stat**
+```{r summaryStat, echo=TRUE}
+summary(AbaloneData)
+```  
+
+**Convert into factors**
+```{r convertFactors, echo=TRUE}
+AbaloneData$sex<-ifelse(AbaloneData$sex=='M', 1, 0)
+AbaloneData$sex<-as.factor(AbaloneData$sex)
+
+```
+
+**Detect NAs**
+```{r detectNAs, echo=TRUE}
+detectNAs<-function(x){
+  return(sum(is.na(x)))
+}
+lapply(AbaloneData, detectNAs)
+```
+
+
+**Split into Train and Test Set**
+```{r splitting, echo=TRUE}
+set.seed(100)
+split<-sample.split(AbaloneData$sex, SplitRatio=0.8)
+trainSet<-subset(AbaloneData, split==TRUE)
+testSet<-subset(AbaloneData, split==FALSE)
+```
+
+
+**Train Model_1**
+```{r trainModel1, echo=TRUE}
+log.fit1 <- glm(sex ~ ., data=trainSet, family = "binomial")
+summary(log.fit1)
+```
+
+**Train Model_2**
+```{r trainModel2, echo=TRUE}
+log.fit2 <- glm(sex ~ (length+diameter+weight.w+weight.s+weight.v+weight.sh+rings), data=trainSet, family = "binomial")
+summary(log.fit2)
+```
+
+**Train Model_3**
+```{r trainModel3, echo=TRUE}
+log.fit3 <- glm(sex ~ (length+diameter+weight.s+weight.v+weight.sh+rings), data=trainSet, family = "binomial")
+summary(log.fit3)
+```
+
+**Train Model_4**
+```{r trainModel4, echo=TRUE}
+log.fit4 <- glm(sex ~ (length+weight.s+weight.v+weight.sh+rings), data=trainSet, family = "binomial")
+summary(log.fit4)
+
+```
+
+**Train Model_5**
+```{r trainModel5, echo=TRUE}
+log.fit5 <- glm(sex ~ (weight.s+weight.v+weight.sh+rings), data=trainSet, family = "binomial")
+summary(log.fit5)
+```
+
+**Train Model_6**
+```{r trainModel6, echo=TRUE}
+log.fit6 <- glm(sex ~ (weight.s+weight.sh+rings), data=trainSet, family = "binomial")
+summary(log.fit6)
+
+```
+
+**Predict Model**
+```{r predictModel, echo=TRUE}
+predict.fit<-predict(log.fit6, newdata = testSet, type="response")
+```
+
+**Confusion Matrix**
+```{r confMatrix, echo=TRUE}
+conf_ablone<-table(predicts=predict.fit>0.5, actuals=testSet$sex)
+conf_ablone
+```
+
+**Accuracy**
+```{r accuracy, echo=TRUE}
+accuracy_ablone=sum(diag(conf_ablone))/sum(conf_ablone)
+accuracy_ablone
+```
+
+**Precision**
+```{r precision, echo=TRUE}
+precision=(469)/(469+257)
+precision
+```
+
+**Recall**
+```{r recall, echo=TRUE}
+recall=(469)/(469+61)
+recall
+```
+
+**ROCR Curve**
+```{r rocrCurve, echo=TRUE}
+ROCRpred <- prediction(predict.fit, testSet$sex)
+ROCRperf <- performance(ROCRpred, 'tpr','fpr')
+plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+auc.tmp <- performance(ROCRpred,"auc")
+auc <- as.numeric(auc.tmp@y.values)
+auc
+```
+**Predictions Results**
+```{r predictions, echo=TRUE}
+pred <- ifelse(predict.fit >= 0.5, "Male", "Female") 
+pred
+```
